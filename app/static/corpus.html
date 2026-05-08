@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Corpus - Entretien à distance</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Workspace Local</p>
+        <h1>Corpus</h1>
+        <p class="hero-link">
+          <a href="https://www.codeandcortex.fr" target="_blank" rel="noreferrer">www.codeandcortex.fr</a>
+        </p>
+        <p class="intro">
+          Cette page permet d'importer une piste audio, d'ouvrir un corpus existant,
+          puis de modifier sa transcription.
+        </p>
+      </header>
+
+      <div class="tab-bar" role="tablist" aria-label="Sections de l'interface">
+        <button id="tab-dashboard-button" class="secondary-button tab-button" type="button" aria-selected="false">
+          Entretien à distance
+        </button>
+        <button id="tab-corpus-button" class="secondary-button tab-button" type="button" aria-selected="true">
+          Ouvrir un corpus
+        </button>
+        <button id="tab-help-button" class="secondary-button tab-button" type="button" aria-selected="false">
+          Aide
+        </button>
+      </div>
+
+      <section id="launch-warning-panel" class="panel panel-focus" hidden>
+        <h2>Ouverture incorrecte</h2>
+        <p id="launch-warning-text" class="status-line" data-tone="error">
+          Cette interface doit être ouverte depuis le serveur local.
+        </p>
+      </section>
+
+      <div class="view-grid view-grid-corpus">
+        <section id="corpus-import-panel" class="panel panel-focus corpus-panel corpus-panel-import">
+          <h2>Importer un corpus</h2>
+          <p class="intro compact-intro">
+            En cours de dev, avec pour objectif de pouvoir annoter, corriger votre corpus.
+          </p>
+          <p class="intro compact-intro">
+            Importez une piste audio et, si vous l'avez déjà, une transcription `.txt` ou `.json`.
+            Vous pourrez ensuite relire l'audio et modifier le texte dans cette page.
+          </p>
+          <form id="corpus-import-form" class="stack-form">
+            <label>
+              <span class="meta-label">Nom du corpus</span>
+              <input id="corpus-title-input" class="text-input" name="corpus_title" placeholder="corpus_entretien_01" required />
+            </label>
+            <label>
+              <span class="meta-label">Piste audio</span>
+              <input id="corpus-audio-file-input" class="text-input" type="file" name="audio_file" accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm" required />
+            </label>
+            <label>
+              <span class="meta-label">Transcription existante</span>
+              <input id="corpus-transcript-file-input" class="text-input" type="file" name="transcript_file" accept=".txt,.json" />
+            </label>
+            <div class="actions">
+              <button id="import-corpus-button" class="primary-button" type="submit">
+                Importer le corpus
+              </button>
+              <button id="open-corpora-button" class="secondary-button" type="button">
+                Ouvrir le dossier des corpus
+              </button>
+            </div>
+          </form>
+          <p id="corpus-import-status" class="status-line">Aucun corpus importé pour le moment.</p>
+        </section>
+
+        <section class="panel corpus-panel corpus-panel-list">
+          <h2>Corpus disponibles</h2>
+          <div id="corpora-list" class="stack-list"></div>
+        </section>
+
+        <section class="panel panel-focus corpus-panel corpus-panel-editor">
+          <h2>Édition du corpus</h2>
+          <div id="corpus-editor-empty" class="empty-line">
+            Sélectionnez un corpus pour afficher la piste audio et modifier le texte.
+          </div>
+          <div id="corpus-editor" hidden>
+            <div class="item-head corpus-editor-head">
+              <div>
+                <strong id="corpus-editor-title">—</strong>
+                <p id="corpus-editor-meta" class="mini-line">—</p>
+              </div>
+              <button id="open-active-corpus-button" class="secondary-button small-button" type="button">
+                Ouvrir ce dossier
+              </button>
+            </div>
+            <audio id="corpus-audio-player" class="audio-player" controls preload="metadata"></audio>
+            <label class="editor-label">
+              <span class="meta-label">Transcription modifiable</span>
+              <textarea id="corpus-transcript-editor" class="text-input corpus-editor-area" spellcheck="false"></textarea>
+            </label>
+            <div class="actions">
+              <button id="save-corpus-transcript-button" class="primary-button" type="button">
+                Enregistrer les modifications
+              </button>
+            </div>
+            <p id="corpus-editor-status" class="status-line">Le corpus est prêt à être modifié.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="/corpus.js"></script>
+  </body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aide - Entretien à distance</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Workspace Local</p>
+        <h1>Aide</h1>
+        <p class="hero-link">
+          <a href="https://www.codeandcortex.fr" target="_blank" rel="noreferrer">www.codeandcortex.fr</a>
+        </p>
+        <p class="intro">
+          Cette page regroupe les prérequis, l'installation et la procédure complète côté enquêteur et participant.
+        </p>
+        <div class="actions">
+          <a class="secondary-button" href="/admin.html">Retour à l'application</a>
+        </div>
+      </header>
+
+      <div class="view-grid view-grid-help">
+        <section class="panel panel-focus help-panel help-panel-prereqs">
+          <h2>Prérequis enquêteur</h2>
+          <div class="stack-list">
+            <p class="mini-line">
+              <strong>Compte ngrok :</strong> un compte ngrok vérifié est nécessaire pour générer le lien distant du participant.
+            </p>
+            <p class="mini-line">
+              <strong>Compte ou instance LiveKit :</strong> il faut une URL LiveKit, une API Key et une API Secret valides pour ouvrir la salle de visioconférence.
+            </p>
+            <p class="mini-line">
+              <strong>FFmpeg :</strong> FFmpeg est nécessaire pour produire "video.mp4", "audio.wav" et "audio.mp3" après l'entretien.
+            </p>
+            <p class="mini-line">
+              <strong>Transcription Whisper :</strong> si vous voulez la transcription automatique, installez aussi `faster-whisper`. Ensuite, dans l'application, vous pouvez choisir la taille du modèle : `small` ou `medium`.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel panel-focus help-panel help-panel-ngrok-steps">
+          <h2>À quoi sert ngrok ?</h2>
+          <p class="intro compact-intro">
+            <a href="https://ngrok.com/" target="_blank" rel="noreferrer">ngrok</a> crée une URL publique en "https"
+            vers l'application qui tourne sur l'ordinateur de l'enquêteur (votre ordinateur).
+            Dans cette application, c'est la solution utilisée pour donner accès au participant.
+            Le participant n'installe rien : il ouvre simplement le lien que vous allez lui envoyer.
+          </p>
+          <figure class="help-figure">
+            <img
+              class="help-image"
+              src="/images/authtoken.png"
+              alt="Capture d'écran ngrok montrant l'emplacement de l'authtoken"
+            />
+            <figcaption class="mini-line">
+              Capture d'écran ngrok : l'authtoken à copier se trouve dans le tableau de bord ngrok.
+            </figcaption>
+          </figure>
+          <div class="stack-list">
+            <article class="item-card command-card">
+              <strong>Connexion ngrok sur Mac</strong>
+              <img
+                class="help-image"
+                src="/images/connect_ngrok_mac.png"
+                alt="Capture d'écran de la procédure de connexion ngrok sur Mac"
+              />
+            </article>
+            <article class="item-card command-card">
+              <strong>Connexion ngrok sur Windows</strong>
+              <img
+                class="help-image"
+                src="/images/connect_ngrok_win.png"
+                alt="Capture d'écran de la procédure de connexion ngrok sur Windows"
+              />
+            </article>
+            <article class="item-card command-card">
+              <strong>Connexion ngrok sur Linux</strong>
+              <img
+                class="help-image"
+                src="/images/connect_ngrok_linux.png"
+                alt="Capture d'écran de la procédure de connexion ngrok sur Linux"
+              />
+            </article>
+          </div>
+          <div id="help-ngrok-steps" class="stack-list"></div>
+        </section>
+
+        <section class="panel panel-focus">
+          <h2>De quoi le participant a besoin ?</h2>
+          <div class="stack-list">
+            <article class="item-card command-card">
+              <strong>Aucune librairie à installer</strong>
+              <p class="mini-line">
+                Le participant n'installe ni Python, ni LiveKit, ni ngrok. Tout passe par le navigateur.
+              </p>
+            </article>
+            <article class="item-card command-card">
+              <strong>Un navigateur récent</strong>
+              <p class="mini-line">
+                Chrome, Edge, Firefox ou Safari récent suffisent, avec caméra et micro autorisés.
+              </p>
+            </article>
+            <article class="item-card command-card">
+              <strong>Une connexion internet</strong>
+              <p class="mini-line">
+                Il lui faut seulement le lien envoyé par l'enquêteur, une connexion internet stable et un ordinateur avec webcam.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel panel-focus">
+          <h2>Où renseigner les clés LiveKit ?</h2>
+          <p class="intro compact-intro">
+            La capture ci-dessous montre les informations LiveKit à récupérer. Dans cette application,
+            vous devez ensuite les saisir dans
+            "2. Configuration LiveKit" : "URL LiveKit", "API Key" et "API Secret".
+          </p>
+          <figure class="help-figure">
+            <img
+              class="help-image"
+              src="/images/appi_key_livekit.png"
+              alt="Capture d'écran LiveKit montrant l'URL, l'API Key et l'API Secret"
+            />
+            <figcaption class="mini-line">
+              Capture d'écran LiveKit : récupérer ici l'URL de l'instance, l'API Key et l'API Secret.
+            </figcaption>
+          </figure>
+          <div class="stack-list">
+            <article class="item-card command-card">
+              <strong>Stockage local</strong>
+              <p class="mini-line">
+                Une fois enregistrées, ces informations sont stockées dans le fichier "config.json" à la racine du projet.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel panel-focus">
+          <h2>Installation de FFmpeg</h2>
+          <p class="intro compact-intro">
+            "FFmpeg" est utilisé pour produire "video.mp4", "audio.wav" et "audio.mp3".
+            Sans lui, les exports et une partie du traitement ne fonctionneront pas.
+          </p>
+          <div id="help-ffmpeg-steps" class="stack-list"></div>
+        </section>
+
+        <section class="panel panel-focus">
+          <h2>Librairies à installer sur Mac</h2>
+          <div class="stack-list">
+            <article class="item-card command-card">
+              <strong>Fichier de transcription</strong>
+              <p class="mini-line">
+                Le fichier "requirements.txt" regroupe les dépendances Python nécessaires à la transcription.
+              </p>
+            </article>
+            <article class="item-card command-card">
+              <strong>Librairies Python pour la transcription</strong>
+              <p class="mini-line">
+                Ce fichier installe surtout "faster-whisper" et ses dépendances Python, notamment "numpy&lt;2".
+              </p>
+              <p class="mono-block">python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt</p>
+            </article>
+            <article class="item-card command-card">
+              <strong>FFmpeg</strong>
+              <p class="mini-line">
+                "ffmpeg" est nécessaire pour générer "video.mp4", "audio.wav" et "audio.mp3".
+              </p>
+              <p class="mono-block">brew install ffmpeg</p>
+            </article>
+            <article class="item-card command-card">
+              <strong>ngrok</strong>
+              <p class="mini-line">
+                "ngrok" est nécessaire pour créer le lien distant du participant.
+              </p>
+              <p class="mono-block">brew install ngrok</p>
+            </article>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="/aide.js"></script>
+  </body>
+</html>

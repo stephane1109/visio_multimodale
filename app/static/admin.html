@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Entretien à distance</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Workspace Local</p>
+        <h1>Entretien à distance</h1>
+        <p class="hero-link">
+          <a href="https://www.codeandcortex.fr" target="_blank" rel="noreferrer">www.codeandcortex.fr</a>
+        </p>
+        <p class="intro">
+          Cette interface permet de lancer une visio à partir de votre Mac/PC. La visio est enregistrée
+          et permet de récupérer mp4, mp3, retranscription.
+        </p>
+      </header>
+
+      <div class="tab-bar" role="tablist" aria-label="Sections de l'interface">
+        <button id="tab-dashboard-button" class="secondary-button tab-button" type="button" aria-selected="true">
+          Entretien à distance
+        </button>
+        <button id="tab-corpus-button" class="secondary-button tab-button" type="button" aria-selected="false">
+          Ouvrir un corpus
+        </button>
+        <button id="tab-help-button" class="secondary-button tab-button" type="button" aria-selected="false">
+          Aide
+        </button>
+      </div>
+
+      <section id="launch-warning-panel" class="panel panel-focus" hidden>
+        <h2>Ouverture incorrecte</h2>
+        <p id="launch-warning-text" class="status-line" data-tone="error">
+          Cette interface doit être ouverte depuis le serveur local.
+        </p>
+      </section>
+
+      <div class="view-grid view-grid-dashboard">
+        <section class="panel panel-focus dashboard-panel dashboard-panel-access">
+          <h2>1. Accès distant</h2>
+          <p class="intro compact-intro">
+            Cette étape prépare le lien distant. Le participant n'utilisera jamais l'URL locale.
+          </p>
+          <div class="recording-meta">
+            <div>
+              <span class="meta-label">Serveur</span>
+              <strong id="server-status">Chargement…</strong>
+            </div>
+            <div>
+              <span class="meta-label">FFmpeg</span>
+              <strong id="ffmpeg-status">—</strong>
+            </div>
+            <div>
+              <span class="meta-label">Ngrok</span>
+              <strong id="ngrok-status">—</strong>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="start-ngrok-button" class="secondary-button" type="button">
+              Démarrer l'accès distant
+            </button>
+            <button id="stop-ngrok-button" class="secondary-button" type="button">
+              Arrêter l'accès distant
+            </button>
+            <button id="refresh-button" class="primary-button" type="button">
+              Actualiser
+            </button>
+          </div>
+          <p class="mini-line mini-line-spaced">L'application générera plus bas le lien distant du participant.</p>
+          <label>
+            <span class="meta-label">Authtoken ngrok</span>
+            <input id="ngrok-authtoken-input" class="text-input" type="password" placeholder="Coller l'authtoken ngrok une seule fois" />
+          </label>
+          <p class="mini-line">Le compte ngrok doit être vérifié une fois avant le premier démarrage.</p>
+          <div class="actions">
+            <button id="save-ngrok-authtoken-button" class="secondary-button" type="button">
+              Enregistrer l'authtoken
+            </button>
+          </div>
+          <p id="ngrok-status-line" class="status-line">Accès distant inactif.</p>
+          <p id="overview-status" class="status-line">Chargement des informations locales…</p>
+        </section>
+
+        <section class="panel panel-focus dashboard-panel dashboard-panel-config">
+          <h2>2. Configuration LiveKit</h2>
+          <p class="intro compact-intro">
+            LiveKit sert ici à afficher les deux webcams en direct dans un écran split.
+            L'enregistrement sélectif reste stocké localement sur le poste du chercheur.
+          </p>
+          <p class="mini-line">
+            "LiveKit" est un serveur média "WebRTC" open source. En pratique, il sert à construire des outils de
+            visioconférence et de streaming live.
+          </p>
+          <p class="mini-line mini-line-spaced">
+            "WebRTC" est la technologie web qui permet de faire passer l'audio et la vidéo en temps réel directement
+            dans le navigateur.
+          </p>
+          <form id="livekit-settings-form" class="stack-form">
+            <label>
+              <span class="meta-label">URL LiveKit</span>
+              <input id="livekit-url-input" class="text-input" name="livekit_url" placeholder="wss://votre-instance.livekit.cloud" />
+            </label>
+            <label>
+              <span class="meta-label">API Key</span>
+              <input id="livekit-api-key-input" class="text-input" name="livekit_api_key" placeholder="LK..." />
+            </label>
+            <label>
+              <span class="meta-label">API Secret</span>
+              <input id="livekit-api-secret-input" class="text-input" name="livekit_api_secret" type="password" placeholder="Secret LiveKit" />
+            </label>
+            <div class="actions">
+              <button id="save-livekit-settings-button" class="primary-button" type="submit">
+                Enregistrer LiveKit
+              </button>
+            </div>
+          </form>
+          <p class="mini-line">
+            Ces informations se renseignent ici puis sont enregistrées dans le fichier `config.json` à la racine du projet.
+          </p>
+          <p id="livekit-settings-status" class="status-line">Chargement de la configuration LiveKit…</p>
+        </section>
+
+        <section class="panel panel-focus dashboard-panel dashboard-panel-session">
+          <h2>3. Créer la session</h2>
+          <p class="intro compact-intro">
+            Une fois l'accès distant actif, créez la session puis copiez le lien distant du participant.
+          </p>
+          <form id="livekit-session-form" class="stack-form">
+            <label>
+              <span class="meta-label">Nom de l'entretien</span>
+              <input id="livekit-participant-code-input" class="text-input" name="participant_code" placeholder="entretien_stephane" required />
+            </label>
+            <div class="choice-grid choice-grid-roles">
+              <label>
+                <span class="meta-label">Rôle participant</span>
+                <input
+                  id="livekit-participant-role-label-input"
+                  class="text-input"
+                  name="participant_role_label"
+                  value="Participant"
+                  placeholder="Participant"
+                />
+              </label>
+              <label>
+                <span class="meta-label">Rôle enquêteur</span>
+                <input
+                  id="livekit-investigator-role-label-input"
+                  class="text-input"
+                  name="investigator_role_label"
+                  value="Enquêteur"
+                  placeholder="Enquêteur"
+                />
+              </label>
+            </div>
+            <label>
+              <span class="meta-label">Note interne</span>
+              <textarea id="livekit-notes-input" class="text-input text-area" name="notes" placeholder="Session LiveKit, entretien 1, etc."></textarea>
+            </label>
+            <div class="actions">
+              <button id="create-livekit-session-button" class="primary-button" type="submit">
+                Créer la session LiveKit
+              </button>
+            </div>
+          </form>
+          <div id="livekit-links-result" class="status-card" hidden>
+            <p class="meta-label">Lien distant du participant</p>
+            <textarea id="livekit-participant-link-output" class="text-input text-area" readonly></textarea>
+            <div class="actions">
+              <button id="copy-livekit-participant-link-button" class="primary-button" type="button">
+                Copier le lien participant
+              </button>
+            </div>
+            <p class="mini-line">
+              Envoyez uniquement ce lien complet au participant.
+            </p>
+            <p class="meta-label">Salle enquêteur</p>
+            <p class="mini-line">
+              Cette salle reste sur votre poste et sert à piloter l'entretien.
+            </p>
+            <div class="actions">
+              <button id="open-livekit-investigator-link-button" class="secondary-button" type="button">
+                Ouvrir la salle enquêteur
+              </button>
+            </div>
+          </div>
+          <p id="livekit-session-status" class="status-line">Aucune session LiveKit créée pour le moment.</p>
+        </section>
+
+        <section class="panel panel-focus dashboard-panel dashboard-panel-whisper">
+          <h2>4. Transcription Whisper</h2>
+          <p class="intro compact-intro">
+            Choisissez la taille du modèle utilisé pour transcrire les entretiens.
+          </p>
+          <div class="choice-grid" role="group" aria-label="Choix du modèle Whisper">
+            <label class="choice-card">
+              <input id="whisper-small-radio" type="radio" name="whisper_model_size" value="small" />
+              <span class="choice-title">Small</span>
+            </label>
+            <label class="choice-card">
+              <input id="whisper-medium-radio" type="radio" name="whisper_model_size" value="medium" />
+              <span class="choice-title">Medium</span>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="save-whisper-button" class="primary-button" type="button">
+              Enregistrer le choix
+            </button>
+          </div>
+          <p id="whisper-status" class="status-line">Chargement du réglage actuel…</p>
+        </section>
+
+        <section class="panel dashboard-panel dashboard-panel-sessions">
+          <div class="item-head">
+            <h2>Sessions reçues</h2>
+            <div class="actions actions-tight">
+              <button id="open-sessions-button" class="secondary-button small-button" type="button">
+                Ouvrir le dossier des sessions
+              </button>
+            </div>
+          </div>
+          <div id="sessions-list" class="stack-list"></div>
+        </section>
+      </div>
+    </main>
+
+    <script src="/admin.js"></script>
+  </body>
+</html>
