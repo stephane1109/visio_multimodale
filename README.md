@@ -1,6 +1,6 @@
 # Outil de collecte d'entretiens
 
-Application locale de collecte d'entretiens cliniques avec :
+Application locale de collecte d'entretiens avec :
 
 - enregistrement vidéo et audio depuis le navigateur de l'enquêté
 - sauvegarde directe sur l'ordinateur de l'enquêteur
