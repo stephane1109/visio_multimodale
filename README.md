@@ -14,7 +14,7 @@ Application locale de collecte d'entretiens avec :
 - transcription avec `faster-whisper`
 - mode `LiveKit Components` pour un entretien en split-screen
 - tableau de bord enquêteur dans le navigateur
-- onglet `Ouvrir un corpus` pour importer un audio et modifier la transcription
+- onglet `Ouvrir un corpus` pour importer un audio et modifier la transcription ##### en cours de dev
 
 Le mode d'emploi détaillé est disponible dans [AIDE.md](/Users/stephanemeurisse/Documents/Recherche/visio_multimodale/AIDE.md).
 
