@@ -76,16 +76,6 @@ visio_multimodale/
   stop_windows.bat
 ```
 
-## 4. Fonctionnement général
-
-L'application est maintenant centrée sur `LiveKit Components` :
-
-- l'enquêteur crée une session
-- il ouvre sa salle de pilotage
-- il transmet le lien participant
-- l'enquêté rejoint la salle à distance
-- l'enquêteur déclenche l'enregistrement depuis sa propre page
-
 ## 5. Lancer l'outil
 
 ### Mac
@@ -278,20 +268,10 @@ Sans casque, le micro de l'enquêteur peut reprendre le son des haut-parleurs et
 
 Dans l'état actuel, un test complet demande deux appareils distincts.
 
-Seul, vous pouvez :
-
-- lancer l'application
-- ouvrir `http://127.0.0.1:8000/admin.html`
-- créer une session LiveKit
-- ouvrir la salle enquêteur
-- vérifier les écrans et l'interface
-
-Mais pour valider le scénario complet avec les deux flux audio/vidéo et la transcription des deux rôles, il faut un deuxième appareil.
-
-La recommandation actuelle est donc :
+Pour valider le scénario complet avec les deux flux audio/vidéo et la transcription des deux rôles, il faut un deuxième appareil.
 
 - enquêteur sur l'ordinateur principal
-- participant sur un autre ordinateur ou un autre appareil réellement utilisable
+- participant sur un autre ordinateur
 
 ## 8. Récupération locale des fichiers
 
