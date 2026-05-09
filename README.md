@@ -6,11 +6,10 @@ Application locale de collecte d'entretiens avec :
 - sauvegarde directe sur l'ordinateur de l'enquêteur
 - export automatique en `video.mp4`
 - export automatique en `audio.mp3`
-- export automatique en `audio.wav`
 - génération de `transcript_participant`
 - génération de `transcript_enqueteur`
 - génération de `transcript_dialogue`
-- extraction audio avec `ffmpeg`
+- conversion média avec `ffmpeg`
 - transcription avec `faster-whisper`
 - mode `LiveKit Components` pour un entretien en split-screen
 - tableau de bord enquêteur dans le navigateur

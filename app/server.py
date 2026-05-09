@@ -52,7 +52,6 @@ DEFAULT_CONFIG = {
     "ffmpeg_binary": "ffmpeg",
     "enable_mp4_export": True,
     "enable_mp3_export": True,
-    "enable_audio_extraction": True,
     "enable_transcription": True,
     "whisper_model_size": "small",
     "whisper_language": "fr",
@@ -65,6 +64,10 @@ DEFAULT_CONFIG = {
 }
 WHISPER_ALLOWED_MODEL_SIZES = {"small", "medium"}
 LIVEKIT_ALLOWED_ROLES = {"participant", "investigator"}
+LIVEKIT_ROLE_STORAGE = {
+    "participant": "participant",
+    "investigator": "enqueteur",
+}
 
 MODEL_LOCK = threading.Lock()
 WHISPER_MODEL: Any | None = None
@@ -313,9 +316,26 @@ def build_livekit_identity(session_id: str, role: str) -> str:
     return f"{normalized_role}_{session_id}"
 
 
-def livekit_role_dir(session_dir: Path, role: str) -> Path:
+def livekit_role_storage_name(role: str) -> str:
     normalized_role = normalize_livekit_role(role)
-    role_dir = session_dir / normalized_role
+    return LIVEKIT_ROLE_STORAGE.get(normalized_role, normalized_role)
+
+
+def get_livekit_role_path(session_dir: Path, role: str) -> Path:
+    storage_name = livekit_role_storage_name(role)
+    target = session_dir / storage_name
+    if target.exists():
+        return target
+
+    legacy_name = normalize_livekit_role(role)
+    legacy_target = session_dir / legacy_name
+    if legacy_target.exists():
+        return legacy_target
+    return target
+
+
+def livekit_role_dir(session_dir: Path, role: str) -> Path:
+    role_dir = get_livekit_role_path(session_dir, role)
     role_dir.mkdir(parents=True, exist_ok=True)
     return role_dir
 
@@ -532,7 +552,8 @@ def update_processing_status(session_dir: Path, status: str, details: dict[str, 
     append_log(session_dir, f"processing={status} details={details}")
 
 
-def extract_wav_from_media(media_path: Path, output_path: Path, config: dict[str, Any]) -> tuple[bool, str, Path | None]:
+def export_audio_mp3(media_path: Path, session_dir: Path, config: dict[str, Any]) -> tuple[bool, str, Path | None]:
+    mp3_path = session_dir / "audio.mp3"
     ffmpeg_binary = get_ffmpeg_binary(config)
     if not ffmpeg_binary:
         return False, "ffmpeg introuvable sur cette machine.", None
@@ -543,42 +564,6 @@ def extract_wav_from_media(media_path: Path, output_path: Path, config: dict[str
         "-i",
         str(media_path),
         "-vn",
-        "-acodec",
-        "pcm_s16le",
-        "-ar",
-        "16000",
-        "-ac",
-        "1",
-        str(output_path),
-    ]
-    completed = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if completed.returncode != 0:
-        error = completed.stderr.strip() or completed.stdout.strip() or "Erreur inconnue ffmpeg."
-        return False, error, None
-    return True, "audio extrait", output_path
-
-
-def extract_audio(video_path: Path, session_dir: Path, config: dict[str, Any]) -> tuple[bool, str, Path | None]:
-    audio_path = session_dir / "audio.wav"
-    return extract_wav_from_media(video_path, audio_path, config)
-
-
-def export_audio_mp3(audio_path: Path, session_dir: Path, config: dict[str, Any]) -> tuple[bool, str, Path | None]:
-    mp3_path = session_dir / "audio.mp3"
-    ffmpeg_binary = get_ffmpeg_binary(config)
-    if not ffmpeg_binary:
-        return False, "ffmpeg introuvable sur cette machine.", None
-
-    command = [
-        ffmpeg_binary,
-        "-y",
-        "-i",
-        str(audio_path),
         "-codec:a",
         "libmp3lame",
         "-q:a",
@@ -835,7 +820,7 @@ def export_role_transcript_aliases(session_root: Path) -> None:
     role_payloads: dict[str, dict[str, Any]] = {}
     role_segments_map: dict[str, list[dict[str, Any]]] = {}
     for role, _alias_stem in aliases:
-        role_dir = session_root / role
+        role_dir = livekit_role_dir(session_root, role)
         payload = load_role_transcript_source(role_dir)
         if not payload:
             continue
@@ -864,14 +849,15 @@ def export_role_transcript_aliases(session_root: Path) -> None:
         filtered_payload["segments_count"] = len(filtered_investigator_segments)
         filtered_payload["cross_talk_removed_segments"] = removed_segments
         filtered_payload["full_text"] = " ".join(segment["text"] for segment in filtered_investigator_segments).strip()
-        save_json_file(session_root / "investigator" / "transcript_filtre.json", filtered_payload)
-        (session_root / "investigator" / "transcript_filtre.txt").write_text(
+        investigator_dir = livekit_role_dir(session_root, "investigator")
+        save_json_file(investigator_dir / "transcript_filtre.json", filtered_payload)
+        (investigator_dir / "transcript_filtre.txt").write_text(
             format_segments_as_text(filtered_investigator_segments),
             encoding="utf-8",
         )
 
     for role, alias_stem in aliases:
-        role_dir = session_root / role
+        role_dir = livekit_role_dir(session_root, role)
         payload = role_payloads.get(role, {})
         if not payload:
             continue
@@ -903,7 +889,7 @@ def build_dialogue_transcript(session_root: Path) -> tuple[bool, str]:
     speaker_labels = get_session_speaker_labels(session_root)
     speaker_sources = [
         ("participant", load_json_file(session_root / "participant" / "transcript.json", {})),
-        ("investigator", load_json_file(session_root / "investigator" / "transcript.json", {})),
+        ("investigator", load_json_file(livekit_role_dir(session_root, "investigator") / "transcript.json", {})),
     ]
 
     dialogue_segments: list[dict[str, Any]] = []
@@ -992,46 +978,31 @@ def process_session_async(session_dir: Path, config: dict[str, Any]) -> None:
     else:
         append_log(session_dir, "Export mp4 désactivé dans la configuration.")
 
-    audio_ok = False
-    audio_message = "extraction audio désactivée"
-    audio_path = None
-
-    if config.get("enable_audio_extraction", True):
-        update_processing_status(session_dir, "running", {"step": "audio_extraction"})
-        audio_ok, audio_message, audio_path = extract_audio(video_path, session_dir, config)
-        append_log(session_dir, audio_message)
-    else:
-        append_log(session_dir, "Extraction audio désactivée dans la configuration.")
-
     mp3_ok = False
     mp3_message = "export mp3 désactivé"
     mp3_path = None
-    if config.get("enable_mp3_export", True) and audio_ok and audio_path is not None:
+    if config.get("enable_mp3_export", True):
         update_processing_status(session_dir, "running", {"step": "audio_mp3_export"})
-        mp3_ok, mp3_message, mp3_path = export_audio_mp3(audio_path, session_dir, config)
+        mp3_ok, mp3_message, mp3_path = export_audio_mp3(video_path, session_dir, config)
         append_log(session_dir, mp3_message)
     elif not config.get("enable_mp3_export", True):
         append_log(session_dir, "Export mp3 désactivé dans la configuration.")
-    elif not audio_ok:
-        append_log(session_dir, "Export mp3 ignoré car l'audio n'a pas pu être extrait.")
 
     transcription_ok = False
     transcription_message = "transcription ignorée"
-    if config.get("enable_transcription", True) and audio_ok and audio_path is not None:
+    transcription_source = mp3_path if mp3_ok and mp3_path is not None else video_path
+    if config.get("enable_transcription", True):
         update_processing_status(session_dir, "running", {"step": "transcription"})
-        transcription_ok, transcription_message = transcribe_audio(audio_path, session_dir, config)
+        transcription_ok, transcription_message = transcribe_audio(transcription_source, session_dir, config)
         append_log(session_dir, transcription_message)
     elif not config.get("enable_transcription", True):
         append_log(session_dir, "Transcription désactivée dans la configuration.")
-    elif not audio_ok:
-        append_log(session_dir, "Transcription ignorée car l'audio n'a pas pu être extrait.")
 
     update_processing_status(
         session_dir,
         "completed",
         {
             "video_mp4_export": {"ok": mp4_ok, "message": mp4_message, "path": str(mp4_path) if mp4_path else None},
-            "audio_extraction": {"ok": audio_ok, "message": audio_message},
             "audio_mp3_export": {"ok": mp3_ok, "message": mp3_message, "path": str(mp3_path) if mp3_path else None},
             "transcription": {"ok": transcription_ok, "message": transcription_message},
         },
@@ -1042,37 +1013,30 @@ def process_session_async(session_dir: Path, config: dict[str, Any]) -> None:
 def process_audio_only_session_async(session_dir: Path, raw_audio_path: Path, config: dict[str, Any]) -> None:
     update_processing_status(session_dir, "running", {"step": "initialisation"})
 
-    wav_ok, wav_message, wav_path = extract_wav_from_media(raw_audio_path, session_dir / "audio.wav", config)
-    append_log(session_dir, wav_message)
-
     mp3_ok = False
     mp3_message = "export mp3 désactivé"
     mp3_path = None
-    if config.get("enable_mp3_export", True) and wav_ok and wav_path is not None:
+    if config.get("enable_mp3_export", True):
         update_processing_status(session_dir, "running", {"step": "audio_mp3_export"})
-        mp3_ok, mp3_message, mp3_path = export_audio_mp3(wav_path, session_dir, config)
+        mp3_ok, mp3_message, mp3_path = export_audio_mp3(raw_audio_path, session_dir, config)
         append_log(session_dir, mp3_message)
     elif not config.get("enable_mp3_export", True):
         append_log(session_dir, "Export mp3 désactivé dans la configuration.")
-    elif not wav_ok:
-        append_log(session_dir, "Export mp3 ignoré car l'audio n'a pas pu être extrait.")
 
     transcription_ok = False
     transcription_message = "transcription ignorée"
-    if config.get("enable_transcription", True) and wav_ok and wav_path is not None:
+    transcription_source = mp3_path if mp3_ok and mp3_path is not None else raw_audio_path
+    if config.get("enable_transcription", True):
         update_processing_status(session_dir, "running", {"step": "transcription"})
-        transcription_ok, transcription_message = transcribe_audio(wav_path, session_dir, config)
+        transcription_ok, transcription_message = transcribe_audio(transcription_source, session_dir, config)
         append_log(session_dir, transcription_message)
     elif not config.get("enable_transcription", True):
         append_log(session_dir, "Transcription désactivée dans la configuration.")
-    elif not wav_ok:
-        append_log(session_dir, "Transcription ignorée car l'audio n'a pas pu être extrait.")
 
     update_processing_status(
         session_dir,
         "completed",
         {
-            "audio_extraction": {"ok": wav_ok, "message": wav_message, "path": str(wav_path) if wav_path else None},
             "audio_mp3_export": {"ok": mp3_ok, "message": mp3_message, "path": str(mp3_path) if mp3_path else None},
             "transcription": {"ok": transcription_ok, "message": transcription_message},
         },
@@ -1097,8 +1061,8 @@ def session_has_recording_artifacts(files: list[str]) -> bool:
 
 
 def summarize_livekit_processing(session_dir: Path) -> dict[str, Any]:
-    participant_processing = load_json_file(session_dir / "participant" / "processing.json", {})
-    investigator_processing = load_json_file(session_dir / "investigator" / "processing.json", {})
+    participant_processing = load_json_file(livekit_role_dir(session_dir, "participant") / "processing.json", {})
+    investigator_processing = load_json_file(livekit_role_dir(session_dir, "investigator") / "processing.json", {})
     processings = [processing for processing in (participant_processing, investigator_processing) if processing]
     if not processings:
         return {}

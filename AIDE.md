@@ -9,7 +9,7 @@ Cet outil permet à un enquêteur de :
 - envoyer un lien temporaire à un enquêté
 - recevoir directement en local la vidéo de l'entretien
 - conserver chaque entretien dans un dossier séparé
-- extraire automatiquement l'audio
+- produire automatiquement l'audio en mp3
 - produire une transcription avec `faster-whisper`
 
 Le point important est le suivant :
@@ -61,7 +61,6 @@ visio_multimodale/
         processing.json
         raw_video.webm
         video.mp4
-        audio.wav
         audio.mp3
         transcript.txt
         transcript.json
@@ -307,9 +306,8 @@ Quand l'enquêté termine l'entretien, l'application :
 Le traitement de fond essaye ensuite de :
 
 1. produire `video.mp4` avec `ffmpeg`
-2. extraire `audio.wav` avec `ffmpeg`
-3. produire `audio.mp3` avec `ffmpeg`
-4. produire une transcription séparée par piste avec `faster-whisper`
+2. produire `audio.mp3` avec `ffmpeg`
+3. produire une transcription séparée par piste avec `faster-whisper`
 
 Le statut du traitement est visible dans :
 
@@ -341,7 +339,6 @@ pip install -r requirements.txt
 `ffmpeg` est nécessaire pour :
 
 - produire `video.mp4`
-- produire `audio.wav`
 - produire `audio.mp3`
 
 Sur Mac :
@@ -377,11 +374,10 @@ Exemple :
 ```json
 {
   "title": "Collecte d'entretien clinique",
-  "max_upload_size_mb": 1024,
+  "max_upload_size_mb": 2048,
   "ffmpeg_binary": "ffmpeg",
   "enable_mp4_export": true,
   "enable_mp3_export": true,
-  "enable_audio_extraction": true,
   "enable_transcription": true,
   "whisper_model_size": "small",
   "whisper_language": "fr",
@@ -396,7 +392,6 @@ Exemple :
 - `max_upload_size_mb` : taille maximale autorisée pour l'envoi
 - `enable_mp4_export` : produit automatiquement une copie standardisée `video.mp4`
 - `enable_mp3_export` : produit automatiquement une copie standardisée `audio.mp3`
-- `enable_audio_extraction` : active ou non `ffmpeg`
 - `enable_transcription` : active ou non Whisper
 - `whisper_model_size` : `small` ou `medium`
 - `whisper_language` : langue forcée pour Whisper, ici `fr`
@@ -406,7 +401,6 @@ Exemple :
 `FFmpeg` est nécessaire pour :
 
 - créer `video.mp4`
-- créer `audio.wav`
 - créer `audio.mp3`
 
 ### Installer FFmpeg sur Mac
@@ -507,13 +501,11 @@ entretien_.../
   participant/
     raw_video.webm
     video.mp4
-    audio.wav
     audio.mp3
     transcript.json
     transcript.txt
-  investigator/
+  enqueteur/
     raw_audio.webm
-    audio.wav
     audio.mp3
     transcript.json
     transcript.txt
@@ -522,10 +514,8 @@ entretien_.../
 La sortie attendue est donc :
 
 - vidéo enquêté en `mp4`
-- audio enquêté en `wav`
 - audio enquêté en `mp3`
 - segments de texte diarises
-- audio enquêteur en `wav`
 - audio enquêteur en `mp3`
 - `transcript_participant`
 - `transcript_enqueteur`
@@ -534,7 +524,7 @@ La sortie attendue est donc :
 Le pipeline retenu est le suivant :
 
 - la piste `participant` reçoit le nom saisi dans `Rôle participant`
-- la piste `investigator` reçoit le nom saisi dans `Rôle enquêteur`
+- la piste `enquêteur` reçoit le nom saisi dans `Rôle enquêteur`
 - on transcrit séparément chaque piste
 - les deux transcriptions sont ensuite fusionnées par ordre temporel dans `transcript_dialogue`
 
@@ -638,7 +628,6 @@ avec au minimum :
 
 et le plus souvent aussi :
 
-- `audio.wav`
 - `audio.mp3`
 - `transcript.txt`
 - `transcript.json`

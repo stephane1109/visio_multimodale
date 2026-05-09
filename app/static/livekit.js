@@ -23,6 +23,7 @@
     uploadDone: false,
     stoppingRecording: false,
     processingPollHandle: null,
+    audioUnlocked: false,
   };
 
   function escapeHtml(value) {
@@ -55,7 +56,7 @@
       eyebrow: "Control Room",
       title: "Salle enqueteur",
       intro:
-        "Vous pilotez ici l'entretien en ligne. Les deux webcams sont visibles dans un ecran split, mais seul le flux video du participant est enregistre, avec l'audio des deux roles et la transcription texte.",
+        "Vous pilotez ici l'entretien en ligne. Les deux webcams sont visibles dans un écran split, mais seul le flux vidéo du participant est enregistré, avec l'audio des deux rôles et la transcription texte.",
       connectionHint: 'Cliquez sur "Rejoindre la session" pour activer la salle enqueteur.',
       roomHint: "La salle enqueteur est prete des que la configuration LiveKit est valide.",
       localLabel: "Votre flux",
@@ -150,7 +151,7 @@
               <section class="panel panel-focus livekit-panel livekit-panel-recording">
                 <h2>Enregistrement</h2>
                 <p class="intro compact-intro">
-                  L'enregistrement pourra etre declenche quand le participant aura donne son consentement.
+                  L'enregistrement pourra être déclenché quand le participant aura donné son consentement.
                 </p>
                 <div class="actions">
                   <button id="start-recording-button" class="primary-button" type="button" disabled>Demarrer l'enregistrement</button>
@@ -163,7 +164,7 @@
                   </div>
                   <div>
                     <span class="meta-label">Sortie</span>
-                    <strong>video participant (mp4) + audio participant/enqueteur (mp3 + wav) + transcription texte</strong>
+                    <strong>video participant (mp4) + audio participant/enqueteur (mp3) + transcription texte</strong>
                   </div>
                 </div>
                 <div class="recording-progress" id="recording-progress">
@@ -562,6 +563,10 @@
       elements.toggleMicButton.disabled = true;
       elements.startAudioButton.disabled = true;
       elements.disconnectButton.disabled = true;
+      elements.toggleCameraButton.dataset.active = "false";
+      elements.toggleMicButton.dataset.active = "false";
+      elements.startAudioButton.dataset.active = "false";
+      elements.disconnectButton.dataset.active = "false";
       return;
     }
 
@@ -574,6 +579,10 @@
     elements.toggleMicButton.disabled = false;
     elements.startAudioButton.disabled = false;
     elements.disconnectButton.disabled = false;
+    elements.toggleCameraButton.dataset.active = cameraEnabled ? "true" : "false";
+    elements.toggleMicButton.dataset.active = micEnabled ? "true" : "false";
+    elements.startAudioButton.dataset.active = state.audioUnlocked ? "true" : "false";
+    elements.disconnectButton.dataset.active = "true";
     elements.toggleCameraButton.textContent = cameraEnabled ? "Camera active" : "Activer camera";
     elements.toggleMicButton.textContent = micEnabled ? "Micro actif" : "Activer micro";
   }
@@ -693,6 +702,7 @@
       state.room.on(LK.RoomEvent.Disconnected, () => {
         state.connected = false;
         state.connectRequested = false;
+        state.audioUnlocked = false;
         updateDeviceButtons();
         renderRemoteParticipants();
         renderLocalParticipant();
@@ -705,6 +715,7 @@
       await state.room.localParticipant.setCameraEnabled(true, getCameraCaptureOptions());
       await state.room.localParticipant.setMicrophoneEnabled(true, getMicrophoneCaptureOptions());
       state.connected = true;
+      state.audioUnlocked = false;
       renderLocalParticipant();
       renderRemoteParticipants();
       updateDeviceButtons();
@@ -738,6 +749,7 @@
     }
     state.connected = false;
     state.connectRequested = false;
+    state.audioUnlocked = false;
     elements.connectButton.disabled = false;
     elements.connectButton.textContent = "Rejoindre la session";
     resetNode(elements.localVideoSlot, "Connexion non demarree");
@@ -782,6 +794,8 @@
         // ignored on purpose
       }
     }
+    state.audioUnlocked = unlocked;
+    updateDeviceButtons();
     setStatus(
       elements.connectionStatus,
       unlocked ? "Lecture audio autorisee." : "Aucun flux audio distant n'est encore disponible.",

@@ -731,6 +731,14 @@ body[data-livekit-role="investigator"] {
   min-width: 160px;
 }
 
+.livekit-track-button[data-active="true"],
+.start-audio-button[data-active="true"] {
+  color: #fff5f7;
+  background: linear-gradient(135deg, #ff5f79, #ff7a92);
+  border-color: rgba(255, 122, 146, 0.5);
+  box-shadow: 0 12px 24px rgba(255, 122, 146, 0.22);
+}
+
 .livekit-inline-tools {
   margin-top: 12px;
 }

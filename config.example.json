@@ -4,7 +4,6 @@
   "ffmpeg_binary": "ffmpeg",
   "enable_mp4_export": true,
   "enable_mp3_export": true,
-  "enable_audio_extraction": true,
   "enable_transcription": true,
   "whisper_model_size": "small",
   "whisper_language": "fr",
