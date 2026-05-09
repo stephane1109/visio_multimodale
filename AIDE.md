@@ -18,7 +18,7 @@ Le point important est le suivant :
 - la vidéo est envoyée vers le serveur local de l'enquêteur
 - les fichiers sont stockés sur la machine locale de l'enquêteur, pas sur un cloud tiers
 
-## 2. Ce que fait exactement l'application
+## 2. Ce que fait l'application
 
 ### Côté enquêté
 
