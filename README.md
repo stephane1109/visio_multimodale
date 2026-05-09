@@ -1,6 +1,6 @@
 # Outil de collecte d'entretiens
 
-Application locale de collecte d'entretiens cliniques avec :
+Application locale de collecte d'entretiens avec :
 
 - enregistrement vidéo et audio depuis le navigateur de l'enquêté
 - sauvegarde directe sur l'ordinateur de l'enquêteur
@@ -14,7 +14,7 @@ Application locale de collecte d'entretiens cliniques avec :
 - transcription avec `faster-whisper`
 - mode `LiveKit Components` pour un entretien en split-screen
 - tableau de bord enquêteur dans le navigateur
-- onglet `Ouvrir un corpus` pour importer un audio et modifier la transcription
+- onglet `Ouvrir un corpus` pour importer le fichier audio et texte afin de modifier/corriger la transcription => en cours de dev
 
 Le mode d'emploi détaillé est disponible dans [AIDE.md](/Users/stephanemeurisse/Documents/Recherche/visio_multimodale/AIDE.md).
 
