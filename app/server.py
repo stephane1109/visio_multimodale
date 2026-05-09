@@ -48,7 +48,7 @@ NGROK_LOG_PATH = TMP_DIR / "ngrok.log"
 
 DEFAULT_CONFIG = {
     "title": "Entretien à distance",
-    "max_upload_size_mb": 1024,
+    "max_upload_size_mb": 2048,
     "ffmpeg_binary": "ffmpeg",
     "enable_mp4_export": True,
     "enable_mp3_export": True,
@@ -615,12 +615,16 @@ def export_video_mp4(video_path: Path, session_dir: Path, config: dict[str, Any]
         "-y",
         "-i",
         str(video_path),
+        "-vf",
+        "fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2",
         "-c:v",
         "libx264",
         "-preset",
-        "fast",
+        "medium",
         "-crf",
-        "23",
+        "20",
+        "-pix_fmt",
+        "yuv420p",
         "-c:a",
         "aac",
         "-b:a",
@@ -636,6 +640,8 @@ def export_video_mp4(video_path: Path, session_dir: Path, config: dict[str, Any]
         check=False,
     )
     if completed.returncode != 0:
+        if mp4_path.exists():
+            mp4_path.unlink()
         error = completed.stderr.strip() or completed.stdout.strip() or "Erreur inconnue ffmpeg."
         return False, error, None
     return True, "vidéo mp4 exportée", mp4_path
@@ -1586,11 +1592,16 @@ class InterviewRequestHandler(SimpleHTTPRequestHandler):
             if not session_id:
                 self.send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": "session_id absent."})
                 return
-            processing_path = SESSIONS_DIR / session_id / "processing.json"
-            if not processing_path.exists():
+            session_dir = SESSIONS_DIR / session_id
+            processing_path = session_dir / "processing.json"
+            processing = load_json_file(processing_path, {})
+            metadata = load_json_file(session_dir / "metadata.json", {})
+            if metadata.get("mode") == "livekit" and not processing:
+                processing = summarize_livekit_processing(session_dir)
+            if not processing:
                 self.send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Session introuvable."})
                 return
-            self.send_json(HTTPStatus.OK, {"ok": True, "processing": load_json_file(processing_path, {})})
+            self.send_json(HTTPStatus.OK, {"ok": True, "processing": processing})
             return
 
         if parsed.path in {"/admin", "/admin.html"}:

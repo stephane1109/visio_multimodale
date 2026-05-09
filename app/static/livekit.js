@@ -21,6 +21,8 @@
     startedAt: null,
     timerHandle: null,
     uploadDone: false,
+    stoppingRecording: false,
+    processingPollHandle: null,
   };
 
   function escapeHtml(value) {
@@ -164,6 +166,36 @@
                     <strong>video participant (mp4) + audio participant/enqueteur (mp3 + wav) + transcription texte</strong>
                   </div>
                 </div>
+                <div class="recording-progress" id="recording-progress">
+                  <article class="progress-step" id="progress-step-recording" data-state="idle">
+                    <span class="progress-dot"></span>
+                    <div>
+                      <strong>Enregistrement</strong>
+                      <p>Capture en cours</p>
+                    </div>
+                  </article>
+                  <article class="progress-step" id="progress-step-stopping" data-state="idle">
+                    <span class="progress-dot"></span>
+                    <div>
+                      <strong>Arret</strong>
+                      <p>Fermeture des pistes</p>
+                    </div>
+                  </article>
+                  <article class="progress-step" id="progress-step-upload" data-state="idle">
+                    <span class="progress-dot"></span>
+                    <div>
+                      <strong>Upload</strong>
+                      <p>Envoi vers le poste chercheur</p>
+                    </div>
+                  </article>
+                  <article class="progress-step" id="progress-step-processing" data-state="idle">
+                    <span class="progress-dot"></span>
+                    <div>
+                      <strong>Traitement termine</strong>
+                      <p>Conversion et transcription</p>
+                    </div>
+                  </article>
+                </div>
                 <p id="recording-status" class="status-line">Connectez la salle puis attendez le participant avant de lancer l'enregistrement.</p>
               </section>
             `
@@ -190,6 +222,11 @@
     stopRecordingButton: document.getElementById("stop-recording-button"),
     recordingTimer: document.getElementById("recording-timer"),
     recordingStatus: document.getElementById("recording-status"),
+    recordingProgress: document.getElementById("recording-progress"),
+    progressStepRecording: document.getElementById("progress-step-recording"),
+    progressStepStopping: document.getElementById("progress-step-stopping"),
+    progressStepUpload: document.getElementById("progress-step-upload"),
+    progressStepProcessing: document.getElementById("progress-step-processing"),
   };
 
   function setStatus(target, message, tone) {
@@ -198,6 +235,77 @@
     }
     target.textContent = message;
     target.dataset.tone = tone || "neutral";
+  }
+
+  function updateProgressStep(target, stateName) {
+    if (!target) {
+      return;
+    }
+    target.dataset.state = stateName;
+  }
+
+  function setRecordingProgress(phase) {
+    updateProgressStep(elements.progressStepRecording, phase === "recording" || phase === "stopping" || phase === "upload" || phase === "processing" || phase === "done" ? "done" : "idle");
+    updateProgressStep(elements.progressStepStopping, phase === "stopping" ? "active" : phase === "upload" || phase === "processing" || phase === "done" ? "done" : "idle");
+    updateProgressStep(elements.progressStepUpload, phase === "upload" ? "active" : phase === "processing" || phase === "done" ? "done" : "idle");
+    updateProgressStep(elements.progressStepProcessing, phase === "processing" ? "active" : phase === "done" ? "done" : "idle");
+  }
+
+  function stopProcessingPolling() {
+    if (state.processingPollHandle) {
+      window.clearInterval(state.processingPollHandle);
+      state.processingPollHandle = null;
+    }
+  }
+
+  async function refreshProcessingStatus() {
+    if (!sessionId) {
+      return;
+    }
+    try {
+      const payload = await fetchJson(`/api/session-status?session_id=${encodeURIComponent(sessionId)}`);
+      const processing = payload.processing || {};
+      const processingStatus = String(processing.status || "").toLowerCase();
+      const processingStep = String(processing.step || "").trim();
+
+      if (processingStatus === "completed") {
+        setRecordingProgress("done");
+        setStatus(
+          elements.recordingStatus,
+          "Traitement termine. Les fichiers et la transcription sont disponibles sur le poste du chercheur.",
+          "success",
+        );
+        stopProcessingPolling();
+        return;
+      }
+
+      if (processingStatus === "failed") {
+        setRecordingProgress("processing");
+        setStatus(
+          elements.recordingStatus,
+          processingStep ? `Traitement en erreur : ${processingStep}` : "Le traitement a rencontre une erreur.",
+          "error",
+        );
+        stopProcessingPolling();
+        return;
+      }
+
+      setRecordingProgress("processing");
+      setStatus(
+        elements.recordingStatus,
+        processingStep ? `Traitement en cours : ${processingStep}` : "Traitement en cours sur le poste du chercheur…",
+        "neutral",
+      );
+    } catch (error) {
+      setRecordingProgress("processing");
+      setStatus(elements.recordingStatus, "Attente du traitement sur le poste du chercheur…", "neutral");
+    }
+  }
+
+  function startProcessingPolling() {
+    stopProcessingPolling();
+    refreshProcessingStatus();
+    state.processingPollHandle = window.setInterval(refreshProcessingStatus, 2500);
   }
 
   function getLivekitClient() {
@@ -269,8 +377,8 @@
     return "";
   }
 
-  function createRecorder(stream, mimeType, chunks) {
-    const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+  function createRecorder(stream, options, chunks) {
+    const recorder = options ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
     recorder.addEventListener("dataavailable", (event) => {
       if (event.data && event.data.size > 0) {
         chunks.push(event.data);
@@ -314,7 +422,7 @@
   }
 
   function isRecordingActive() {
-    return Boolean(state.participantRecorder || state.investigatorRecorder);
+    return Boolean(state.participantRecorder || state.investigatorRecorder || state.stoppingRecording);
   }
 
   async function loadCredentials() {
@@ -352,6 +460,37 @@
     };
   }
 
+  function getCameraCaptureOptions() {
+    return {
+      resolution: {
+        width: 1280,
+        height: 720,
+      },
+      frameRate: 30,
+    };
+  }
+
+  function getParticipantRecorderOptions(mimeType) {
+    const options = {
+      videoBitsPerSecond: 8_000_000,
+      audioBitsPerSecond: 192_000,
+    };
+    if (mimeType) {
+      options.mimeType = mimeType;
+    }
+    return options;
+  }
+
+  function getInvestigatorRecorderOptions(mimeType) {
+    const options = {
+      audioBitsPerSecond: 160_000,
+    };
+    if (mimeType) {
+      options.mimeType = mimeType;
+    }
+    return options;
+  }
+
   function renderLocalParticipant() {
     resetNode(elements.localVideoSlot);
     if (!state.room) {
@@ -383,6 +522,21 @@
     const LK = getLivekitClient();
     const cameraPub = remoteParticipant.getTrackPublication(LK.Track.Source.Camera);
     if (cameraPub && cameraPub.track) {
+      if (typeof cameraPub.setSubscribed === "function") {
+        cameraPub.setSubscribed(true);
+      }
+      if (typeof cameraPub.setEnabled === "function") {
+        cameraPub.setEnabled(true);
+      }
+      if (typeof cameraPub.setVideoQuality === "function" && LK.VideoQuality && "HIGH" in LK.VideoQuality) {
+        cameraPub.setVideoQuality(LK.VideoQuality.HIGH);
+      }
+      if (typeof cameraPub.setVideoDimensions === "function") {
+        cameraPub.setVideoDimensions({ width: 1280, height: 720 });
+      }
+      if (typeof cameraPub.setVideoFPS === "function") {
+        cameraPub.setVideoFPS(30);
+      }
       const videoElement = cameraPub.track.attach();
       videoElement.className = "live-video-element";
       elements.remoteVideoSlot.appendChild(videoElement);
@@ -446,9 +600,11 @@
       return;
     }
     if (state.uploadDone) {
+      setRecordingProgress("done");
       setStatus(elements.recordingStatus, "L'enregistrement a deja ete transmis pour cette session.", "success");
       return;
     }
+    setRecordingProgress("idle");
     setStatus(elements.recordingStatus, "Tout est pret. Vous pouvez lancer l'enregistrement.", "success");
   }
 
@@ -503,7 +659,12 @@
     try {
       const credentials = state.credentials || (await loadCredentials());
       const LK = getLivekitClient();
-      state.room = new LK.Room();
+      state.room = new LK.Room({
+        adaptiveStream: false,
+        dynacast: false,
+        videoCaptureDefaults: getCameraCaptureOptions(),
+        audioCaptureDefaults: getMicrophoneCaptureOptions(),
+      });
 
       state.room.on(LK.RoomEvent.TrackSubscribed, () => {
         renderRemoteParticipants();
@@ -541,7 +702,7 @@
       });
 
       await state.room.connect(credentials.livekit_url, credentials.token);
-      await state.room.localParticipant.setCameraEnabled(true);
+      await state.room.localParticipant.setCameraEnabled(true, getCameraCaptureOptions());
       await state.room.localParticipant.setMicrophoneEnabled(true, getMicrophoneCaptureOptions());
       state.connected = true;
       renderLocalParticipant();
@@ -594,7 +755,7 @@
     const LK = getLivekitClient();
     const cameraPub = state.room.localParticipant.getTrackPublication(LK.Track.Source.Camera);
     const shouldEnable = !(cameraPub && cameraPub.track && !cameraPub.isMuted);
-    await state.room.localParticipant.setCameraEnabled(shouldEnable);
+    await state.room.localParticipant.setCameraEnabled(shouldEnable, getCameraCaptureOptions());
     renderLocalParticipant();
     updateDeviceButtons();
   }
@@ -644,13 +805,22 @@
       const participantMimeType = chooseMimeType("participant");
       const investigatorMimeType = chooseMimeType("investigator");
 
-      state.participantRecorder = createRecorder(participantStream, participantMimeType, state.participantChunks);
-      state.investigatorRecorder = createRecorder(investigatorStream, investigatorMimeType, state.investigatorChunks);
+      state.participantRecorder = createRecorder(
+        participantStream,
+        getParticipantRecorderOptions(participantMimeType),
+        state.participantChunks,
+      );
+      state.investigatorRecorder = createRecorder(
+        investigatorStream,
+        getInvestigatorRecorderOptions(investigatorMimeType),
+        state.investigatorChunks,
+      );
 
       state.participantRecorder.start(1000);
       state.investigatorRecorder.start(1000);
 
       startTimer();
+      setRecordingProgress("recording");
       elements.startRecordingButton.disabled = true;
       elements.stopRecordingButton.disabled = false;
       setStatus(
@@ -670,8 +840,25 @@
     if (!recorder) {
       return;
     }
-    const stopped = new Promise((resolve) => recorder.addEventListener("stop", resolve, { once: true }));
-    recorder.stop();
+    if (recorder.state === "inactive") {
+      return;
+    }
+    const stopped = new Promise((resolve) => {
+      recorder.addEventListener("stop", resolve, { once: true });
+      recorder.addEventListener("error", resolve, { once: true });
+    });
+    try {
+      if (typeof recorder.requestData === "function") {
+        recorder.requestData();
+      }
+    } catch (error) {
+      // ignore
+    }
+    try {
+      recorder.stop();
+    } catch (error) {
+      return;
+    }
     await stopped;
   }
 
@@ -703,15 +890,18 @@
     const participantRecorder = state.participantRecorder;
     const investigatorRecorder = state.investigatorRecorder;
     const recordingStartedAt = state.startedAt ? state.startedAt.toISOString() : "";
-
-    await Promise.all([stopRecorder(participantRecorder), stopRecorder(investigatorRecorder)]);
-
+    state.stoppingRecording = true;
+    setRecordingProgress("stopping");
+    elements.startRecordingButton.disabled = true;
+    elements.stopRecordingButton.disabled = true;
+    setStatus(elements.recordingStatus, "Arret de l'enregistrement en cours…", "neutral");
     resetTimer();
     state.participantRecorder = null;
     state.investigatorRecorder = null;
-    elements.stopRecordingButton.disabled = true;
 
     try {
+      await Promise.all([stopRecorder(participantRecorder), stopRecorder(investigatorRecorder)]);
+      setRecordingProgress("upload");
       setStatus(elements.recordingStatus, "Envoi des fichiers vers l'ordinateur du chercheur…", "neutral");
 
       const participantMimeType = participantRecorder.mimeType || chooseMimeType("participant") || "video/webm";
@@ -743,14 +933,14 @@
       );
 
       state.uploadDone = true;
-      setStatus(
-        elements.recordingStatus,
-        "Enregistrement termine et transmis. La transcription Whisper continue maintenant sur le poste du chercheur.",
-        "success",
-      );
+      setRecordingProgress("processing");
+      setStatus(elements.recordingStatus, "Upload termine. Traitement en cours sur le poste du chercheur…", "neutral");
+      startProcessingPolling();
     } catch (error) {
       setStatus(elements.recordingStatus, error.message || "L'envoi a echoue.", "error");
+      setRecordingProgress("idle");
     } finally {
+      state.stoppingRecording = false;
       updateRecordingAvailability();
     }
   }
@@ -810,6 +1000,7 @@
       if (state.room) {
         state.room.disconnect();
       }
+      stopProcessingPolling();
       resetTimer();
     });
   }
