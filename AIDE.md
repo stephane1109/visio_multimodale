@@ -5,11 +5,11 @@
 Cet outil permet à un enquêteur de :
 
 - lancer une petite application web sur son propre ordinateur
-- ouvrir un tableau de bord enquêteur avec des boutons
+- ouvrir un tableau de bord enquêteur
 - envoyer un lien temporaire à un enquêté
 - recevoir directement en local la vidéo de l'entretien
-- conserver chaque entretien dans un dossier séparé
-- produire automatiquement l'audio en mp3
+- conserver chaque entretien dans un dossier
+- récuperer mp4, mp3, transcription horodatée en fichier texte
 - produire une transcription avec `faster-whisper`
 
 Le point important est le suivant :
@@ -18,7 +18,7 @@ Le point important est le suivant :
 - la vidéo est envoyée vers le serveur local de l'enquêteur
 - les fichiers sont stockés sur la machine locale de l'enquêteur, pas sur un cloud tiers
 
-## 2. Ce que fait exactement l'application
+## 2. Ce que fait l'application
 
 ### Côté enquêté
 
@@ -52,20 +52,47 @@ visio_multimodale/
   app/
     server.py
     static/
+      admin.html
+      aide.html
+      corpus.html
+      livekit.html
       style.css
+      images/
+      vendor/
   data/
+    invites.json
     sessions/
-      session_.../
-        consent.json
+      entretien_.../
+        livekit_session.json
         metadata.json
         processing.json
-        raw_video.webm
-        video.mp4
-        audio.mp3
-        transcript.txt
-        transcript.json
         logs.txt
-  tmp/
+        transcript_participant.json
+        transcript_participant.txt
+        transcript_enqueteur.json
+        transcript_enqueteur.txt
+        transcript_dialogue.json
+        transcript_dialogue.txt
+        segments_diarises.json
+        segments_diarises.txt
+        participant/
+          raw_video.webm
+          video.mp4
+          audio.mp3
+          consent.json
+          metadata.json
+          processing.json
+          transcript.json
+          transcript.txt
+        enqueteur/
+          raw_audio.webm
+          audio.mp3
+          metadata.json
+          processing.json
+          transcript.json
+          transcript.txt
+    corpora/
+    tmp/
   config.example.json
   requirements.txt
   Lancer.command
